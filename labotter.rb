@@ -9,12 +9,12 @@ ActiveRecord::Base.establish_connection(
 )
 
 class User < ActiveRecord::Base
-	has_many :labstats
+	has_many :labostats
 
 	def laboin
 		return false if self.inlabo == true
-		ActiveReocrd::Base.transaction do
-			self.labstats.create!(
+		ActiveRecord::Base.transaction do
+			self.labostats.create!(
 				:laboin => DateTime.now.strftime('%s') 
 			)
 			self.inlabo = true
@@ -24,10 +24,16 @@ class User < ActiveRecord::Base
 
 	def laborida
 		return false if self.inlabo == false
+		p self.labostats
 	end
 
 end
 
-class Labstats < ActiveRecord::Base
+class Labostat < ActiveRecord::Base
 	belongs_to :user
 end
+
+user = User.new(screen_name: 'tester')
+user.save
+user.laboin
+user.laborida
