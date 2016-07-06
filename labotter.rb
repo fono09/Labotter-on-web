@@ -11,7 +11,7 @@ ActiveRecord::Base.establish_connection(
 class User < ActiveRecord::Base
 	has_many :labostats
 
-	def laboin
+	def laboin!
 		return false if self.inlabo == true
 		ActiveRecord::Base.transaction do
 			self.labostats.create!(
@@ -22,9 +22,15 @@ class User < ActiveRecord::Base
 		end
 	end	   
 
-	def laborida
+	def laborida!
 		return false if self.inlabo == false
-		p self.labostats
+		last_inlabo = self.labostats.find_by(laborida: nil)
+		ActiveRecord::Base.transaction do
+			last_inlabo.laborida = DateTime.now.strftime('%s')
+			last_inlabo.save
+			self.inlabo = false
+			self.save
+		end
 	end
 
 end
@@ -33,7 +39,7 @@ class Labostat < ActiveRecord::Base
 	belongs_to :user
 end
 
-user = User.new(screen_name: 'tester')
-user.save
-user.laboin
-user.laborida
+user = User.create(screen_name: 'tester')
+user.laboin!
+user.laborida!
+p user
