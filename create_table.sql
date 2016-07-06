@@ -1,12 +1,13 @@
 create table users (
-	id		INTEGER PRIMARY KEY,
+	id		INTEGER PRIMARY KEY AUTO_INCREMENT,
 	screen_name	TEXT,
 	access_token	TEXT,
 	access_token_secret TEXT,
-	labobin		BOOLEAN
+	inlabo		BOOLEAN
 );
 create table labstats (
-	id		INTEGER,
+	id		INTEGER PRIMARY KEY AUTO_INCREMENT,
+	user_id		INTEGER,
 	laboin		INTEGER,
 	laborida	INTEGER
 );
