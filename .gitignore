@@ -51,3 +51,6 @@ build-iPhoneSimulator/
 
 # db
 labotter.sqlite3
+
+# settings
+settings.json

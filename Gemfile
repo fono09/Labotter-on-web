@@ -3,4 +3,6 @@ gem 'activerecord',:require => 'active_record'
 gem 'sqlite3'
 gem 'sinatra'
 gem 'puma'
+gem 'twitter_oauth'
+
 
