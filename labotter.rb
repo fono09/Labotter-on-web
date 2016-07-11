@@ -16,7 +16,7 @@ class User < ActiveRecord::Base
 		return false if self.inlabo == true
 		ActiveRecord::Base.transaction do
 			self.labostats.create!(
-				:laboin => Time.now.strftime('%s') 
+				:laboin => Time.now.to_i
 			)
 			self.inlabo = true
 			self.save
@@ -27,7 +27,7 @@ class User < ActiveRecord::Base
 		return false if self.inlabo == false
 		last_laboin = self.get_last_labostat
 		ActiveRecord::Base.transaction do
-			last_laboin.laborida = Time.now.strftime('%s')
+			last_laboin.laborida = Time.now.to_i
 			last_laboin.save
 			self.inlabo = false
 			self.save
@@ -40,10 +40,18 @@ class User < ActiveRecord::Base
 		return last_laboin
 	end
 
+	def get_sum_seconds(sec)
+		sum = self.labostats.where(laboin: (Time.now.to_i - sec)..Time.now.to_i).inject(0){|sum, n| 
+			sum += n.laborida.to_i - n.laboin.to_i
+		}
+		return sum
+	end
+
 end
 
 class Labostat < ActiveRecord::Base
 	belongs_to :user
+
 	def laboin
 		return Time.at(super)
 	end
@@ -53,15 +61,14 @@ class Labostat < ActiveRecord::Base
 	end
 end
 
-class TwitterUA < TwitterOAuth::Client
+class UserAgent < TwitterOAuth::Client
 	attr_reader :ar_user
 
 	def initialize(user)
 		raise TypeError.new('user must be class User') unless user.is_a?(User)
 
 		@ar_user = user
-		
-		unless SETTINGS['twitter']['user_local_access_token'] == true then
+		unless SETTINGS['twitter']['use_local_access_token'] == true then
 			super(
 				:consumer_key => SETTINGS['twitter']['consumer_key'],
 				:consumer_secret => SETTINGS['twitter']['consumer_secret'],
@@ -79,32 +86,19 @@ class TwitterUA < TwitterOAuth::Client
 	end
 
 	def laboin!
-		p self.update('. @' + self.ar_user.screen_name + 'が' + self.ar_user.get_last_labostat.laboin.strftime('%H時%M分%S秒') + 'にらぼいんしました。 #labotter')
+		ar_user.laboin!
+		self.update('.@' + self.ar_user.screen_name + 'が' + self.ar_user.get_last_labostat.laboin.strftime('%H時%M分%S秒') + 'にらぼいんしました。 #labotter')
 	end
 
 	def laborida!
-		p self.update('. @' + self.ar_user.screen_name + 'が' + self.ar_user.get_last_labostat.laborida.strftime('%H時%M分%S秒') + 'にらぼりだしました。 #labotter')
+		ar_user.laborida!
+		self.update('.@' + self.ar_user.screen_name + 'が' + self.ar_user.get_last_labostat.laborida.strftime('%H時%M分%S秒') + 'にらぼりだしました。 #labotter')
 	end
 
-end
-
-class UserAgent
-
-	def initialize(user)
-		@user = user
-		@tua = TwitterUA.new(user)
+	def last_an_week
+		self.update('.@' + self.ar_user.screen_name + 'は過去7日間で' + (self.ar_user.get_sum_seconds(Time.now.to_i - 60*60*24*7)/3600).to_s + '時間らぼにいました')
 	end
 
-	def laboin!
-		@user.laboin!
-		@tua.laboin!
-	end
-
-	def laborida!
-		@user.laborida!
-		@tua.laborida!
-	end
-	
 end
 
 exit
