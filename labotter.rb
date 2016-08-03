@@ -57,7 +57,8 @@ class Labostat < ActiveRecord::Base
 	end
 
 	def laborida
-		return Time.at(super)
+		return Time.at(super) unless super == nil
+		return nil
 	end
 end
 
@@ -86,19 +87,131 @@ class UserAgent < TwitterOAuth::Client
 	end
 
 	def laboin!
-		ar_user.laboin!
+		return false unless ar_user.laboin!
 		self.update('.@' + self.ar_user.screen_name + 'が' + self.ar_user.get_last_labostat.laboin.strftime('%H時%M分%S秒') + 'にらぼいんしました。 #labotter')
 	end
 
 	def laborida!
-		ar_user.laborida!
+		return false unless ar_user.laborida!
 		self.update('.@' + self.ar_user.screen_name + 'が' + self.ar_user.get_last_labostat.laborida.strftime('%H時%M分%S秒') + 'にらぼりだしました。 #labotter')
 	end
 
-	def last_an_week
+	def tweet_labostat
+		buff = '.@' + self.ar_user.screen_name + 'は、' + Time.now.strftime('%H時%M分%S秒') + '現在、らぼに'
+		buff += ar_user.inlabo ? 'います' : 'いません'
+		buff += '。'
+		self.update(buff)
+	end
+
+	def tweet_last_an_week
 		self.update('.@' + self.ar_user.screen_name + 'は過去7日間で' + (self.ar_user.get_sum_seconds(Time.now.to_i - 60*60*24*7)/3600).to_s + '時間らぼにいました')
 	end
 
 end
 
-exit
+set base_url: "https://fono.jp/labotter"
+
+use Rack::Session::Cookie,
+	:key => 'labotter.session',
+	:path => '/labotter',
+	:secret => 'super secret'
+
+
+before do
+	 @twitter_client = TwitterOAuth::Client.new(
+		:consumer_key => SETTINGS['twitter']['consumer_key'],
+		:consumer_secret => SETTINGS['twitter']['consumer_secret']
+	)
+
+	headers 'Access-Control-Allow-Origin' => '*'
+end
+
+after do
+	ActiveRecord::Base.connection.close
+end
+
+helpers do
+	def logged_in?
+		logger.info("session[:authorized]")
+		logger.info(session[:authorized])
+		begin 
+			user = User.find(session[:authorized])
+		rescue
+			redirect to("#{settings.base_url}/request_token")
+		end
+		return user
+	end
+end
+	
+
+get '/' do
+	user = logged_in?
+	File.read(File.join('public', 'index.html'))
+end
+
+get '/request_token' do
+	callback = "#{settings.base_url}/access_token"
+	request_token = @twitter_client.request_token(:oauth_callback => callback)
+	session[:request_token] = request_token.token
+	session[:request_token_secret] = request_token.secret
+	redirect request_token.authorize_url
+end
+
+get '/access_token' do
+	user = ""
+	begin 
+		access_token = @twitter_client.authorize(session[:request_token], session[:request_token_secret], :oauth_verifier => params[:oauth_verifier])
+		logger.info(access_token)
+		user = User.find_by(:twitter_id => access_token.params[:user_id])
+		if user.nil? then
+			user = User.create(
+				:twitter_id => access_token.params[:user_id],
+				:access_token => access_token.token,
+				:access_token_secret => access_token.secret,
+				:screen_name => access_token.params[:screen_name]
+			)
+		end
+	rescue
+		logger.info $@
+		halt 404, "Login with twitter Failed"
+	end
+	session.delete(:request_token)
+	session.delete(:request_token_secret)
+	session[:authorized] = user.id
+	"<a href=\"#{settings.base_url}\">らぼったーUIへ</a>"
+end
+
+get '/labostats' do
+	user = logged_in?
+	last_labostat = user.get_last_labostat
+	return user.get_last_labostat.to_json
+end
+
+post '/labostats/share' do
+	user = logged_in?
+	ua = UserAgent.new(user)
+	return ua.tweet_labostat.to_json
+end
+
+post '/labostats' do
+	user = logged_in?
+	ua = UserAgent.new(user)
+	stat = ua.laboin!
+	return { success: stat }.to_json
+end
+
+put '/labostats' do
+	user = logged_in?
+	ua = UserAgent.new(user)
+	stat = ua.laborida!
+	return { success: stat }.to_json
+end
+
+delete '/labostats' do
+	"まだ工事中"
+end
+
+
+options '*' do
+	200
+end
