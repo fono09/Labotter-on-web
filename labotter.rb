@@ -145,6 +145,10 @@ end
 	
 
 get '/' do
+	"らぼったー on Webはらぼの入退室記録をつけるやつです。<br>らぼったーを使う<a href=\"#{settings.base_url}/ui\">認証</a>"
+end
+
+get '/ui' do
 	user = logged_in?
 	File.read(File.join('public', 'index.html'))
 end
@@ -178,7 +182,7 @@ get '/access_token' do
 	session.delete(:request_token)
 	session.delete(:request_token_secret)
 	session[:authorized] = user.id
-	"<a href=\"#{settings.base_url}\">らぼったーUIへ</a>"
+	redirect to "#{settings.base_url}\\"
 end
 
 get '/labostats' do

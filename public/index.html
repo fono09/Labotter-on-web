@@ -16,20 +16,31 @@
 	</head>
 	<body>
 		<h1>らぼったー on Web(仮)</h1>
-		<button type="button" class="btn btn-primary labutton">らぼいん</button>
-		<button type="button" class="btn btn-default laboshare">しぇあ</button>
+		<div class="col-xs-2">
+			<button type="button" class="btn btn-primary labutton">らぼいん</button>
+			<button type="button" class="btn btn-default laboshare">しぇあ</button>
+		</div>
+		<div class="col-xs-3">
+			<form action="javascript:void(0)" type="multipart/form-data">
+				<div class="form-group" >
+					<div class="input-group">
+						<input type="file" id="file-input" name="file-input" style="display: none;">
+						<span class="input-group-btn">
+							<button class="btn btn-default" type="button" onclick="$('#file-input').click();"><span class="glyphicon glyphicon-folder-open"></span></button>
+						</span>
+						<input id="csv-name" type="text" class="form-control" placeholder="本家らぼった～のCSVをくだちい" disabled>       
+						<span class="input-group-btn">
+							<button type="submit" name="csv-up" class="btn btn-primary csv-up">あげる</button>
+						</span>
+					</div>
+				</div>
+			</form>
+		</div>
 	</body>
 
 	<script type="text/javascript">
 (() => {
-	BASE_URL = "https://fono.jp/labotter/";
-
-	$.ajaxSetup({xhrFields: { withCredentials: true } });
-
-	$.get(BASE_URL + 'labostats').then(
-		(data) => {
-			data = JSON.parse(data);
-			if(!data.laborida){
+	BASE_URL = "https://fono.jp/labotter/"; $.ajaxSetup({xhrFields: { withCredentials: true } }); $.get(BASE_URL + 'labostats').then( (data) => { data = JSON.parse(data); if(!data.laborida){
 				$('.labutton').text('らぼりだ');
 			}
 			Promise.resolve();
@@ -64,6 +75,7 @@
 				(responce) => {
 					console.log(responce);
 					alert('らぼりだ失敗！もう一度ログインから試してみてください');
+					return Promise.reject();
 				}
 			);
 		}
@@ -82,6 +94,32 @@
 			}
 		);
 	});
+
+	$('#file-input').change(function(){
+		$('#csv-name').val($(this).val());
+	});
+
+	$('.csv-up').on('click', () => {
+		var fd = new FormData();
+		fd.append('csv',$('#file-input').prop("files")[0]);
+
+		$.post({
+			url: BASE_URL + "labostats/csv",
+			data: fd,
+			processData: false
+		}).then(
+			(reponsce) => {
+				console.log(responce);
+				return Promise.resolve();
+			},
+			(responce) => {
+				console.log(responce);
+				return Promise.reject();
+			}
+		);
+	});
+				
+
 })();
 	
 	</script>
