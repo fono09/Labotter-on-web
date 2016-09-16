@@ -21,7 +21,7 @@
 			<button type="button" class="btn btn-default laboshare">しぇあ</button>
 		</div>
 		<div class="col-xs-3">
-			<form action="javascript:void(0)" type="multipart/form-data">
+			<form type="multipart/form-data" class="csv-up">
 				<div class="form-group" >
 					<div class="input-group">
 						<input type="file" id="file-input" name="file-input" style="display: none;">
@@ -30,9 +30,10 @@
 						</span>
 						<input id="csv-name" type="text" class="form-control" placeholder="本家らぼった～のCSVをくだちい" disabled>       
 						<span class="input-group-btn">
-							<button type="submit" name="csv-up" class="btn btn-primary csv-up">あげる</button>
+							<button type="submit" name="csv-up" class="btn btn-primary">あげる</button>
 						</span>
 					</div>
+					<span class="result"></span>
 				</div>
 			</form>
 		</div>
@@ -43,12 +44,10 @@
 	BASE_URL = "https://fono.jp/labotter/"; $.ajaxSetup({xhrFields: { withCredentials: true } }); $.get(BASE_URL + 'labostats').then( (data) => { data = JSON.parse(data); if(!data.laborida){
 				$('.labutton').text('らぼりだ');
 			}
-			Promise.resolve();
 		},
 		(responce) => {
 			alert('らぼ状態のロードに失敗！もう一度ログインから試してみてください');
 			console.log(responce);
-			Promise.reject();
 		}
 	);
 
@@ -58,11 +57,9 @@
 				(responce) => {
 					console.log(responce);
 					$('.labutton').text("らぼりだ");
-					return Promise.resolve();
 				},
 				(responce) => {
 					alert('らぼいん失敗！もう一度ログインから試してみてください');
-					return Promise.reject();
 				}
 			);
 		}else{
@@ -70,12 +67,10 @@
 				(responce) => {
 					console.log(responce);
 					$('.labutton').text("らぼいん");
-					return Promise.resolve();
 				},
 				(responce) => {
 					console.log(responce);
 					alert('らぼりだ失敗！もう一度ログインから試してみてください');
-					return Promise.reject();
 				}
 			);
 		}
@@ -85,12 +80,10 @@
 		$.post(BASE_URL + "labostats/share").then(
 			(responce) => {
 				console.log(responce);
-				return Promise.resolve();
 			},
 			(responce) => {
 				console.log(responce);
 				alert('しぇあ失敗！もう一度ログインから試してみてください');
-				return Promise.reject();
 			}
 		);
 	});
@@ -99,24 +92,32 @@
 		$('#csv-name').val($(this).val());
 	});
 
-	$('.csv-up').on('click', () => {
+	$('.csv-up').on('submit', (event) => {
+
+		$('.csv-up .result').text("アップロード中");
+
+		event.preventDefault();
+
 		var fd = new FormData();
 		fd.append('csv',$('#file-input').prop("files")[0]);
 
 		$.post({
 			url: BASE_URL + "labostats/csv",
 			data: fd,
-			processData: false
+			processData: false,
+			contentType: false
 		}).then(
-			(reponsce) => {
-				console.log(responce);
-				return Promise.resolve();
+			() => {
+				$('.csv-up .result').text('アップロード成功！');
 			},
 			(responce) => {
+				$('.csv-up .result').text('アップロード失敗！');
 				console.log(responce);
-				return Promise.reject();
 			}
 		);
+
+		event.target.reset();
+
 	});
 				
 

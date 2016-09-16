@@ -47,6 +47,55 @@ class User < ActiveRecord::Base
 		return sum
 	end
 
+	def load_csv(lines)
+		lines.shift #一行目はラベルなので破棄
+		labotter_time_fmt = '"%Y-%m-%d %H:%M:%S"'
+		ActiveRecord::Base.transaction do
+			while line = lines.shift do
+				data = line.split(',')
+
+				laboin = Time.strptime(data[1], labotter_time_fmt).to_i
+				laborida = Time.strptime(data[2], labotter_time_fmt).to_i
+
+				arel_table = self.labostats.arel_table
+
+				if (duplicate_labostat = self.labostats.where(arel_table[:laboin].gt(laboin)).where(arel_table[:laborida].lt(laborida))).present? then
+
+					puts 'range * + + *'
+					p duplicate_labostat
+
+					duplicate_labostat.update(laboin: laboin, laborida:laborida)
+
+				elsif (duplicate_labostat = self.labostats.where(arel_table[:laboin].lt(laboin)).where(arel_table[:laborida].gt(laborida))).present? then
+
+					puts 'range + * * +'
+					p duplicate_labostat
+
+				elsif (duplicate_labostat = self.labostats.where(laborida: laboin..laborida)).present? then
+
+					puts 'range + * + *'
+					p duplicate_labostat
+
+					duplicate_labostat.update(laborida: laborida)
+
+				elsif (duplicate_labostat = self.labostats.where(laboin: laboin..laborida)).present? then
+
+					puts 'range * + * +'
+					p duplicate_labostat
+					
+					duplicate_labostat.update(laboin: laboin)
+
+				else
+					self.labostats.create!(
+						:laboin => Time.strptime(data[1], labotter_time_fmt).to_i,
+						:laborida => Time.strptime(data[2], labotter_time_fmt).to_i
+					)
+				end
+			end
+		end
+		return true
+	end
+
 end
 
 class Labostat < ActiveRecord::Base
@@ -202,6 +251,21 @@ post '/labostats' do
 	ua = UserAgent.new(user)
 	stat = ua.laboin!
 	return { success: stat }.to_json
+end
+
+post '/labostats/csv' do
+	user = logged_in?
+	halt 400 unless params[:csv] 
+
+	fh = params[:csv][:tempfile].open
+	lines = fh.readlines
+	fh.close
+
+	if user.load_csv(lines) then
+		halt 200
+	else
+		halt 500
+	end
 end
 
 put '/labostats' do

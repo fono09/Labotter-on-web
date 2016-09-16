@@ -1,0 +1,14 @@
+[Unit]
+Description=Labotter on Web
+After=network.target
+
+[Service]
+Type=forking
+WorkingDirectory=/home/fono/Github/labotter
+ExecStart=/usr/local/bin/rainbows -c rainbows.rb -D
+ExecReload=/bin/kill -HUP $MAINPID
+ExecStop=/bin/kill -QUIT $MAINPID
+PIDFile=/var/run/labotter.pid
+
+[Install]
+WantedBy=multi-user.target
